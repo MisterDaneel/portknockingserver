@@ -40,8 +40,10 @@ def sniffer(port):
             print('Port {} OK'.format(port))
             return
 
+
 if __name__ == '__main__':
     s = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)
     print('Listening ports: {} {} {}'.format(*ports)) 
     for port in ports:
         sniffer(port)
+    s.close()
