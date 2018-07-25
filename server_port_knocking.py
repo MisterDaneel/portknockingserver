@@ -1,6 +1,8 @@
 from socket import socket, AF_INET, SOCK_RAW, IPPROTO_TCP
 from struct import unpack
 
+from multiprocessing import Process, Queue
+
 # for i in "3" "4" "1"; do nc 127.0.0.1 ${i}; done 
 
 
@@ -10,6 +12,7 @@ BUFFSIZE = 2048
 
 # config
 ports = [3, 4, 1]
+timeout = 5 
 
 
 def get_iph_length(packet_bytes):
@@ -28,7 +31,7 @@ def get_dest_port(iph_length, packet_bytes):
         return dest_port
 
 
-def sniffer(port):
+def sniffer(port, queue=None):
     while True:
         packet = s.recvfrom(BUFFSIZE)
         packet_bytes = packet[0]
@@ -38,12 +41,43 @@ def sniffer(port):
 
         if dest_port == port:
             print('Port {} OK'.format(port))
-            return
+            break
+    if queue:
+        queue.put(None)
 
+
+def timeout_sniffer(port):
+    queue = Queue()
+    proc = Process(target=sniffer, args=(port, queue, ))
+    proc.start()
+    try:
+        queue.get(timeout=timeout)
+        proc.join()
+        return False
+    except:
+        proc.terminate()
+        return True
+
+
+def check_sequence(s):
+    # wait for first port without timeout
+    sniffer(ports[0])
+
+    # wait for others ports with timeout
+    for port in ports[1:]:
+        timeout = timeout_sniffer(port)
+        if timeout:
+            print('Port {} TIMEOUT'.format(port))
+            return False
+    return True
+ 
 
 if __name__ == '__main__':
     s = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)
-    print('Listening ports: {} {} {}'.format(*ports)) 
-    for port in ports:
-        sniffer(port)
+    while True:
+        print('Listening ports: {} {} {}'.format(*ports)) 
+        if check_sequence(s):
+            print("SEQUENCE OK")
+        else:
+            print("SEQUENCE NOK")
     s.close()
