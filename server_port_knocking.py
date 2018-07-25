@@ -1,4 +1,4 @@
-from socket import inet_ntoa, htons, socket, AF_INET, SOCK_RAW, IPPROTO_TCP
+from socket import socket, AF_INET, SOCK_RAW, IPPROTO_TCP
 from struct import unpack
 
 # for i in "3" "4" "1"; do nc 127.0.0.1 ${i}; done 
